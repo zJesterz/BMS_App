@@ -61,7 +61,7 @@ return Scaffold(
       children: [
         Text(
           'Analytics',
-          style: theme.textTheme.headlineSmall,
+          style: theme.textTheme.headlineMedium,
         ),
 
         const SizedBox(height: 12),
