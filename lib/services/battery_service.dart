@@ -92,7 +92,7 @@ class MqttBatteryService implements BatteryService {
         voltage: 0,
         current: 0,
         temperature: 0,
-        status: BatteryStatus.idle,
+        status: BatteryStatus.fault,
         lastUpdated: DateTime.now(),
       );
     }
@@ -119,14 +119,22 @@ class MqttBatteryService implements BatteryService {
     onDataUpdated?.call();
   }
 
+  Battery _flagStale(Battery b) {
+    if (DateTime.now().difference(b.lastUpdated).inSeconds > 60) {
+      return b.copyWith(status: BatteryStatus.fault);
+    }
+    return b;
+  }
+
   @override
   Future<List<Battery>> fetchBatteries() async {
-    return _cache.values.toList();
+    return _cache.values.map(_flagStale).toList();
   }
 
   @override
   Future<Battery?> fetchBatteryById(String id) async {
-    return _cache[id];
+    final b = _cache[id];
+    return b != null ? _flagStale(b) : null;
   }
 
   void dispose() {

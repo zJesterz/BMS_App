@@ -12,8 +12,6 @@ class MqttService {
   final _telemetryController = StreamController<BmsTelemetry>.broadcast();
 
   bool _isConnected = false;
-  bool _intentionalDisconnect = false;
-
   String host;
   int port;
 
@@ -25,11 +23,14 @@ class MqttService {
   Stream<BmsTelemetry> get telemetryStream => _telemetryController.stream;
   bool get isConnected => _isConnected;
 
-  Future<void> connect() async {
+  Future<void> connect({
+    String? username,
+    String? password,
+    String? clientId,
+  }) async {
     if (_isConnected) return;
 
-    _intentionalDisconnect = false;
-    final id = 'battery_monitor_${Random().nextInt(99999)}';
+    final id = clientId ?? 'battery_monitor_${Random().nextInt(99999)}';
     _client = MqttServerClient(host, id);
     _client!.port = port;
     _client!.keepAlivePeriod = 20;
@@ -39,6 +40,11 @@ class MqttService {
 
     final connMessage = MqttConnectMessage()
         .withClientIdentifier(id);
+
+    if (username != null && password != null) {
+      connMessage.authenticateAs(username, password);
+    }
+
     _client!.connectionMessage = connMessage;
 
     _client!.onConnected = () {
@@ -47,7 +53,6 @@ class MqttService {
 
     _client!.onDisconnected = () {
       _isConnected = false;
-      if (!_intentionalDisconnect) {}
     };
 
     try {
@@ -79,7 +84,6 @@ class MqttService {
   }
 
   void disconnect() {
-    _intentionalDisconnect = true;
     _isConnected = false;
     _client?.disconnect();
     _client = null;

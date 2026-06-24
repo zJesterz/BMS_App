@@ -1,29 +1,36 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'screens/login_screen.dart';
+import 'services/auth_service.dart';
 import 'services/battery_service.dart';
-import 'services/mqtt_service.dart';
 import 'utils/app_settings.dart';
 import 'utils/theme.dart';
-void main() {
-  final mqttService = MqttService(host: '10.154.52.212');
-  mqttService.connect();
-  final batteryService = MqttBatteryService(mqttService: mqttService);
-  runApp(BatteryMonitorApp(batteryService: batteryService));
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  runApp(const BatteryMonitorApp());
 }
-/// Root application widget.
+
 class BatteryMonitorApp extends StatefulWidget {
-  const BatteryMonitorApp({super.key, this.batteryService});
+  const BatteryMonitorApp({super.key, this.authService, this.batteryService});
+  final AuthService? authService;
   final BatteryService? batteryService;
+
   @override
   State<BatteryMonitorApp> createState() => _BatteryMonitorAppState();
 }
+
 class _BatteryMonitorAppState extends State<BatteryMonitorApp> {
   bool _isDarkMode = false;
+
   void _setDarkMode(bool value) {
     setState(() {
       _isDarkMode = value;
     });
   }
+
   @override
   Widget build(BuildContext context) {
     return AppSettingsScope(
@@ -35,7 +42,10 @@ class _BatteryMonitorAppState extends State<BatteryMonitorApp> {
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
         themeMode: _isDarkMode ? ThemeMode.dark : ThemeMode.light,
-        home: LoginScreen(batteryService: widget.batteryService ?? MockBatteryService()),
+        home: LoginScreen(
+          authService: widget.authService,
+          batteryService: widget.batteryService,
+        ),
       ),
     );
   }

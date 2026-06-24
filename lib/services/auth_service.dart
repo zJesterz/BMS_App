@@ -1,37 +1,79 @@
-/// Result of an authentication attempt.
+import 'package:firebase_auth/firebase_auth.dart';
+
 enum AuthResult {
   success,
   invalidCredentials,
+  emailAlreadyInUse,
+  weakPassword,
 }
 
-/// Abstract contract for user authentication.
-///
-/// Replace [MockAuthService] with a REST or token-based implementation
-/// when connecting to a real backend.
 abstract class AuthService {
-  /// Validates credentials and returns the outcome.
   Future<AuthResult> login(String username, String password);
-
-  /// Clears the current session (no-op for mock; useful for real backends).
+  Future<AuthResult> register(String username, String password);
   Future<void> logout();
 }
 
-/// Mock authentication using fixed admin credentials.
-class MockAuthService implements AuthService {
-  MockAuthService();
+/// Real Firebase Email/Password authentication.
+class FirebaseAuthService implements AuthService {
+  final _auth = FirebaseAuth.instance;
 
+  @override
+  Future<AuthResult> login(String username, String password) async {
+    try {
+      await _auth.signInWithEmailAndPassword(
+        email: username.trim(),
+        password: password,
+      );
+      return AuthResult.success;
+    } on FirebaseAuthException {
+      return AuthResult.invalidCredentials;
+    }
+  }
+
+  @override
+  Future<AuthResult> register(String username, String password) async {
+    try {
+      await _auth.createUserWithEmailAndPassword(
+        email: username.trim(),
+        password: password,
+      );
+      return AuthResult.success;
+    } on FirebaseAuthException catch (e) {
+      switch (e.code) {
+        case 'email-already-in-use':
+          return AuthResult.emailAlreadyInUse;
+        case 'weak-password':
+          return AuthResult.weakPassword;
+        default:
+          return AuthResult.invalidCredentials;
+      }
+    }
+  }
+
+  @override
+  Future<void> logout() async {
+    await _auth.signOut();
+  }
+}
+
+/// Mock authentication — kept for testing without Firebase.
+class MockAuthService implements AuthService {
   static const String _mockUsername = 'admin';
   static const String _mockPassword = 'admin';
 
   @override
   Future<AuthResult> login(String username, String password) async {
-    // Simulate network latency.
     await Future<void>.delayed(const Duration(milliseconds: 400));
-
     if (username == _mockUsername && password == _mockPassword) {
       return AuthResult.success;
     }
     return AuthResult.invalidCredentials;
+  }
+
+  @override
+  Future<AuthResult> register(String username, String password) async {
+    await Future<void>.delayed(const Duration(milliseconds: 400));
+    return AuthResult.success;
   }
 
   @override

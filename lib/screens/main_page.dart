@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'dart:ui';
 import '../models/battery.dart';
 
 class HomePage extends StatelessWidget {
@@ -18,10 +17,8 @@ class HomePage extends StatelessWidget {
     final offlineCount =
         batteries.where((b) => b.status == BatteryStatus.fault).length;
 
-    final avgSoc = batteries.isEmpty
-        ? 0
-        : batteries.map((b) => b.percentage).reduce((a, b) => a + b) /
-            batteries.length;
+    final unconnectedCount =
+    batteries.where((b) => b.status == BatteryStatus.idle).length;
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
@@ -41,12 +38,12 @@ class HomePage extends StatelessWidget {
             physics: const NeverScrollableScrollPhysics(),
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: 1.4,
+            childAspectRatio:  1.4,
             children: [
               _glassCard('Total Batteries', batteries.length.toString(), const Color(0xFF1A6FFF)),
-              _glassCard('Active',          activeCount.toString(),      const Color(0xFF00C97A)),
-              _glassCard('Offline',         offlineCount.toString(),     const Color(0xFFFF9F2E)),
-              _glassCard('Avg SOC',         '${avgSoc.toStringAsFixed(0)}%', const Color(0xFFFF4D6A)),    
+              _glassCard('Active Batteries',          activeCount.toString(),      const Color(0xFF00C97A)),
+              _glassCard('Unloaded Batteries',         offlineCount.toString(),     const Color(0xFFFF9F2E)),
+              _glassCard('Unconnected Batteries',      unconnectedCount.toString(), const Color(0xFFFF3B30)),    
             ],
           ),
 
@@ -158,7 +155,7 @@ class HomePage extends StatelessWidget {
                 Text(
                   value,
                   style: const TextStyle(
-                    fontSize: 38,
+                    fontSize: 35,
                     fontWeight: FontWeight.w800,
                     color: Colors.white,
                     letterSpacing: -1,
