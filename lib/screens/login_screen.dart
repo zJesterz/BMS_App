@@ -112,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+            padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 30),
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 400),
               child: Column(
@@ -120,10 +120,10 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   // Branding
                   Container(
-                    padding: const EdgeInsets.all(6),
+                    padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
                       color: scheme.primaryContainer.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(5),
+                      borderRadius: BorderRadius.circular(2),
                     ),
                     child: Image.asset(
                       'assets/innovmon_logo.avif',

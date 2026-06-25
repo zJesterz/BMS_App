@@ -34,10 +34,12 @@ class Battery {
     required this.temperature,
     required this.status,
     required this.lastUpdated,
+    this.ownerEmail,
   });
 
   final String id;
   final String name;
+  final String? ownerEmail;
 
   /// State of charge, 0–100 percent.
   final double percentage;

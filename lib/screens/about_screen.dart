@@ -16,17 +16,20 @@ class AboutScreen extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             // Logo placeholder — replace with Image.asset when you send the logo
-            Image.asset(
-              'assets/logo.jpg',
-              width: 150,
-              height: 150,
+            ClipOval(
+              child: Image.asset(
+                'assets/logo.jpg',
+                width: 150,
+                height: 150,
+                fit: BoxFit.cover,
+              ),
             ),
             const SizedBox(height: 24),
             Text(
               'Welcome to ${AboutInfo.appName}',
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: const Color.fromARGB(255, 255, 0, 0),
+                color: const Color.fromARGB(255, 180, 70, 11),
               ),
               textAlign: TextAlign.center,
             ),
@@ -55,7 +58,7 @@ class AboutScreen extends StatelessWidget {
                     Text('Contact Us',
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
-                          color: const Color.fromARGB(255, 255, 0, 0),
+                          color: const Color.fromARGB(255, 180, 70, 11),
                         )),
                     const SizedBox(height: 12),
                     Row(children: [

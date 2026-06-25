@@ -11,6 +11,7 @@ abstract class AuthService {
   Future<AuthResult> login(String username, String password);
   Future<AuthResult> register(String username, String password);
   Future<void> logout();
+  String? get currentUserEmail;
 }
 
 /// Real Firebase Email/Password authentication.
@@ -18,6 +19,7 @@ class FirebaseAuthService implements AuthService {
   final _auth = FirebaseAuth.instance;
 
   @override
+  String? get currentUserEmail => _auth.currentUser?.email;
   Future<AuthResult> login(String username, String password) async {
     try {
       await _auth.signInWithEmailAndPassword(
@@ -62,6 +64,7 @@ class MockAuthService implements AuthService {
   static const String _mockPassword = 'admin';
 
   @override
+  String? get currentUserEmail => 'admin';
   Future<AuthResult> login(String username, String password) async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
     if (username == _mockUsername && password == _mockPassword) {

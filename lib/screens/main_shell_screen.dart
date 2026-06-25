@@ -34,6 +34,9 @@ class _MainShellScreenState extends State<MainShellScreen> {
   List<Battery> _batteries = [];
   int _selectedPageIndex = 0;
   bool _loadingEvConfig = true;
+  bool _mqttConnecting = false;
+  bool _mqttConnected = false;
+  int _batteryUpdateTick = 0;
 
   @override
   void initState() {
@@ -43,35 +46,45 @@ class _MainShellScreenState extends State<MainShellScreen> {
   }
 
   Future<void> _initFromFirestore() async {
+    setState(() => _loadingEvConfig = false);
+  }
+
+  Future<void> _startMqtt(String evId) async {
+    setState(() => _mqttConnecting = true);
     try {
       final email = FirebaseAuth.instance.currentUser?.email;
+      final evs = email != null
+          ? await EvService().getEvsForUser(email)
+          : <EvConfig>[];
 
-      if (email == null) {
-        setState(() => _loadingEvConfig = false);
-        return;
-      }
+      final config = evs.firstWhere(
+        (e) => e.evid == evId,
+        orElse: () => evs.isNotEmpty
+            ? evs.first
+            : EvConfig(
+                evid: evId,
+                mqttClient: '',
+                mqttUsername: '',
+                mqttPassword: '',
+                iotEndpoint: '',
+              ),
+      );
 
-
-      final evs = await EvService().getEvsForUser(email);
-
-      if (evs.isEmpty) {
-        setState(() => _loadingEvConfig = false);
-        return;
-      }
-
-      // Use first EV config — expand later for multi-EV support
-      final config = evs.first;
-
-      // Parse host from iotendpoint URL
       final uri = Uri.tryParse(config.iotEndpoint);
-      final host = uri?.host ?? config.iotEndpoint;
-      final port = uri?.port != 0 ? (uri?.port ?? 1883) : 1883;
+      final host =
+          (uri?.host.isNotEmpty ?? false) ? uri!.host : config.iotEndpoint;
+      final port = (uri?.port ?? 0) != 0 ? uri!.port : 1883;
+
+      _mqttService?.disconnect();
 
       final mqttService = MqttService(host: host, port: port);
       await mqttService.connect(
-        username: config.mqttUsername,
-        password: config.mqttPassword,
-        clientId: config.mqttClient,
+        username:
+            config.mqttUsername.isNotEmpty ? config.mqttUsername : null,
+        password:
+            config.mqttPassword.isNotEmpty ? config.mqttPassword : null,
+        clientId:
+            config.mqttClient.isNotEmpty ? config.mqttClient : null,
       );
 
       final batteryService = MqttBatteryService(mqttService: mqttService);
@@ -80,16 +93,23 @@ class _MainShellScreenState extends State<MainShellScreen> {
       setState(() {
         _mqttService = mqttService;
         _batteryService = batteryService;
-        _loadingEvConfig = false;
+        _mqttConnected = mqttService.isConnected;
+        _mqttConnecting = false;
       });
 
       _loadBatteries();
-    } catch (e) {
-      setState(() => _loadingEvConfig = false);
+    } catch (_) {
+      setState(() {
+        _mqttConnecting = false;
+        _mqttConnected = false;
+      });
     }
   }
 
-  void _onDataUpdated() => _loadBatteries();
+  void _onDataUpdated() {
+    _loadBatteries();
+    if (mounted) setState(() => _batteryUpdateTick++);
+  }
 
   void _loadBatteries() {
     _batteryService.fetchBatteries().then((list) {
@@ -128,9 +148,13 @@ class _MainShellScreenState extends State<MainShellScreen> {
         return HomePage(batteries: _batteries);
       case 1:
         return BatteriesPage(
-          batteries: _batteries,
           batteryService: _batteryService,
+          authService: widget.authService ?? FirebaseAuthService(),
           onRefresh: _onRefresh,
+          mqttConnected: _mqttConnected,
+          mqttConnecting: _mqttConnecting,
+          onStartMqtt: _startMqtt,
+          batteryUpdateTick: _batteryUpdateTick,
         );
       case 2:
         return const AnalyticsPage();

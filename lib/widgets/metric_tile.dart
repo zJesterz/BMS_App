@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 
 /// Reusable metric display tile used on the details screen.
-///
-/// Shows an icon, label, and prominent value in a rounded card surface.
 class MetricTile extends StatelessWidget {
   const MetricTile({
     super.key,
@@ -10,33 +8,40 @@ class MetricTile extends StatelessWidget {
     required this.label,
     required this.value,
     this.subtitle,
+    this.compact = false,
   });
 
   final IconData icon;
   final String label;
   final String value;
   final String? subtitle;
+  final bool compact;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
 
+    final iconPad = compact ? 6.0 : 8.0;
+    final iconSize = compact ? 16.0 : 22.0;
+    final spacer1 = compact ? 8.0 : 12.0;
+    final spacer2 = compact ? 2.0 : 4.0;
+
     return Card(
       child: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.all(compact ? 10.0 : 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              padding: EdgeInsets.all(iconPad),
               decoration: BoxDecoration(
                 color: scheme.primaryContainer.withValues(alpha: 0.5),
-                borderRadius: BorderRadius.circular(12),
+                borderRadius: BorderRadius.circular(compact ? 8 : 12),
               ),
-              child: Icon(icon, color: scheme.primary, size: 22),
+              child: Icon(icon, color: scheme.primary, size: iconSize),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: spacer1),
             Text(
               label,
               style: theme.textTheme.bodySmall?.copyWith(
@@ -44,12 +49,13 @@ class MetricTile extends StatelessWidget {
                 fontWeight: FontWeight.w500,
               ),
             ),
-            const SizedBox(height: 4),
+            SizedBox(height: spacer2),
             Text(
               value,
-              style: theme.textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
+              style: (compact
+                      ? theme.textTheme.titleMedium
+                      : theme.textTheme.titleLarge)
+                  ?.copyWith(fontWeight: FontWeight.w700),
             ),
             if (subtitle != null) ...[
               const SizedBox(height: 2),
