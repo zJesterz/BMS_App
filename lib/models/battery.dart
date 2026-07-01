@@ -82,6 +82,19 @@ class Battery {
   }
 
   @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is Battery &&
+          id == other.id &&
+          percentage == other.percentage &&
+          voltage == other.voltage &&
+          current == other.current &&
+          status == other.status;
+
+  @override
+  int get hashCode => Object.hash(id, percentage, voltage, current, status);
+
+  @override
   String toString() =>
       'Battery(id: $id, name: $name, percentage: $percentage%)';
 }

@@ -60,47 +60,6 @@ class HomePage extends StatelessWidget {
               ),
             ],
           ),
-
-          const SizedBox(height: 24),
-
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Battery Details',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-                  ),
-                  const SizedBox(height: 12),
-                  DataTable(
-                    columns: const [
-                      DataColumn(label: Text('Battery')),
-                      DataColumn(label: Text('Voltage')),
-                      DataColumn(label: Text('SOC')),
-                    ],
-                    rows:
-                        batteries.map((battery) {
-                          return DataRow(
-                            cells: [
-                              DataCell(Text(battery.name)),
-                              DataCell(
-                                Text('${battery.voltage.toStringAsFixed(1)} V'),
-                              ),
-                              DataCell(
-                                Text(
-                                  '${battery.percentage.toStringAsFixed(0)}%',
-                                ),
-                              ),
-                            ],
-                          );
-                        }).toList(),
-                  ),
-                ],
-              ),
-            ),
-          ),
         ],
       ),
     );

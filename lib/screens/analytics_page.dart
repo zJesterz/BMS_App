@@ -393,7 +393,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             children: [
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _bms1,
+                  initialValue: _bms1,
                   decoration: const InputDecoration(
                     labelText: 'BMS 1',
                     border: OutlineInputBorder(),
@@ -410,7 +410,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
               const SizedBox(width: 12),
               Expanded(
                 child: DropdownButtonFormField<String>(
-                  value: _bms2,
+                  initialValue: _bms2,
                   decoration: const InputDecoration(
                     labelText: 'BMS 2',
                     border: OutlineInputBorder(),
@@ -480,32 +480,58 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
 
           if (_batteryOptions.isNotEmpty)
             MultiSelectDialogField(
-              items: _batteryOptions
-                  .map((e) => MultiSelectItem<String>(e, e))
-                  .toList(),
-              title: const Text('Select Batteries'),
-              buttonText: Text(
+            items: _batteryOptions
+                .map((e) => MultiSelectItem<String>(e, e))
+                .toList(),
+            title: Text(
+              'Select Batteries',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            ),
+            buttonText: Text(
               selectedBatteryIds.isEmpty
                   ? 'Batteries'
                   : selectedBatteryIds.length == 1
                       ? '1 Battery'
                       : '${selectedBatteryIds.length} Batteries',
-              ),
-              initialValue: selectedBatteryIds,
-              searchable: true,
-              dialogHeight: 400,
-              onConfirm: (values) {
-                setState(() => selectedBatteryIds = values.cast<String>());
-              },
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
             ),
+            itemsTextStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            selectedItemsTextStyle: TextStyle(color: Theme.of(context).colorScheme.primary),
+            unselectedColor: Theme.of(context).colorScheme.onSurfaceVariant,
+            selectedColor: Theme.of(context).colorScheme.primary,
+            checkColor: Theme.of(context).colorScheme.onPrimary,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+            cancelText: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            confirmText: Text('OK', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
+            initialValue: selectedBatteryIds,
+            searchable: true,
+            dialogHeight: 400,
+            onConfirm: (values) {
+              setState(() => selectedBatteryIds = values.cast<String>());
+            },
+          ),
           const SizedBox(height: 12),
 
           MultiSelectDialogField(
             items: metricOptions
                 .map((e) => MultiSelectItem<String>(e, e))
                 .toList(),
-            title: const Text('Select Metrics'),
-            buttonText: const Text('Metrics'),
+            title: Text(
+              'Select Metrics',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            ),
+            buttonText: Text(
+              'Metrics',
+              style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            ),
+            itemsTextStyle: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+            selectedItemsTextStyle: TextStyle(color: Theme.of(context).colorScheme.primary),
+            unselectedColor: Theme.of(context).colorScheme.onSurfaceVariant,
+            selectedColor: Theme.of(context).colorScheme.primary,
+            checkColor: Theme.of(context).colorScheme.onPrimary,
+            backgroundColor: Theme.of(context).colorScheme.surfaceContainerHigh,
+            cancelText: Text('Cancel', style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            confirmText: Text('OK', style: TextStyle(color: Theme.of(context).colorScheme.primary)),
             initialValue: selectedMetrics,
             searchable: false,
             dialogHeight: 350,
@@ -562,13 +588,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
     );
   }
 
-  String _formatDateTime(DateTime dt) {
-    final d = dt.day.toString().padLeft(2, '0');
-    final m = dt.month.toString().padLeft(2, '0');
-    final h = dt.hour.toString().padLeft(2, '0');
-    final min = dt.minute.toString().padLeft(2, '0');
-    return '$d/$m/${dt.year} $h:$min';
-  }
+
 
   Widget _graphView(ThemeData theme) {
     return Stack(

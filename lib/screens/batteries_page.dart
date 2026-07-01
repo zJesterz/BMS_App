@@ -16,6 +16,8 @@ class BatteriesPage extends StatefulWidget {
     this.mqttConnected = false,
     this.mqttConnecting = false,
     this.batteryUpdateTick = 0,
+    this.onGo,
+    this.statusMessage,
   });
 
   final BatteryService batteryService;
@@ -24,6 +26,11 @@ class BatteriesPage extends StatefulWidget {
   final bool mqttConnected;
   final bool mqttConnecting;
   final int batteryUpdateTick;
+  final Future<void> Function({
+    required String bms1,
+    required String bms2,
+  })? onGo;
+  final String? statusMessage;
 
   @override
   State<BatteriesPage> createState() => _BatteriesPageState();
@@ -36,6 +43,10 @@ class _BatteriesPageState extends State<BatteriesPage> {
   List<Battery> _batteries = [];
   bool _loading = true;
 
+  final List<String> bmsOptions = ['Daly', 'Jiabaida'];
+  String _bms1 = 'Daly';
+  String _bms2 = 'Daly';
+
   @override
   void initState() {
     super.initState();
@@ -47,7 +58,7 @@ class _BatteriesPageState extends State<BatteriesPage> {
     super.didUpdateWidget(old);
     if (old.batteryUpdateTick != widget.batteryUpdateTick ||
         (old.mqttConnected != widget.mqttConnected && widget.mqttConnected)) {
-      _loadBatteries();
+      _loadBatteries(showLoading: false);
     }
   }
 
@@ -63,8 +74,8 @@ class _BatteriesPageState extends State<BatteriesPage> {
     await _loadBatteries();
   }
 
-  Future<void> _loadBatteries() async {
-    setState(() => _loading = true);
+  Future<void> _loadBatteries({bool showLoading = true}) async {
+    if (showLoading) setState(() => _loading = true);
     final all = await widget.batteryService.fetchBatteries();
 
     if (_evConfigs.isEmpty && all.isNotEmpty) {
@@ -104,6 +115,11 @@ class _BatteriesPageState extends State<BatteriesPage> {
   Future<void> _onRefresh() async {
     await widget.onRefresh();
     await _loadBatteries();
+  }
+
+  Future<void> _handleGo() async {
+    if (widget.onGo == null || widget.mqttConnecting) return;
+    await widget.onGo!(bms1: _bms1, bms2: _bms2);
   }
 
   List<Battery> get _evBatteries {
@@ -205,22 +221,50 @@ class _BatteriesPageState extends State<BatteriesPage> {
 
                   // ── Battery pack multi-select ──────────────────────
                   if (evBatteries.isNotEmpty)
-                    MultiSelectDialogField<String>(
-                      items: evBatteries
-                          .map((b) => MultiSelectItem<String>(b.id, b.name))
+                   MultiSelectDialogField<String>(
+                    items: evBatteries
+                        .map((b) => MultiSelectItem<String>(b.id, b.name))
+                        .toList(),
+                    title: Text(
+                      'Select Battery Packs',
+                      style: TextStyle(color: scheme.onSurface),
+                    ),
+                    buttonText: Text(
+                      'Choose Battery Packs',
+                      style: TextStyle(color: scheme.onSurface),
+                    ),
+                    itemsTextStyle: TextStyle(color: scheme.onSurface),
+                    selectedItemsTextStyle: TextStyle(color: scheme.primary),
+                    unselectedColor: scheme.onSurfaceVariant,
+                    selectedColor: scheme.primary,
+                    checkColor: scheme.onPrimary,
+                    backgroundColor: scheme.surfaceContainerHigh,
+                    cancelText: Text('Cancel', style: TextStyle(color: scheme.onSurfaceVariant)),
+                    confirmText: Text('OK', style: TextStyle(color: scheme.primary)),
+                    initialValue: _selectedBatteryIds,
+                    searchable: false,
+                    dialogHeight: 400,
+                    chipDisplay: MultiSelectChipDisplay<String>(
+                      items: _selectedBatteryIds
+                          .map((id) => MultiSelectItem<String>(
+                                id,
+                                evBatteries
+                                    .firstWhere((b) => b.id == id)
+                                    .name,
+                              ))
                           .toList(),
-                      title: const Text('Select Battery Packs'),
-                      buttonText: const Text('Choose Battery Packs'),
-                      initialValue: _selectedBatteryIds,
-                      searchable: false,
-                      dialogHeight: 400,
-                      onConfirm: (values) {
-                        setState(() => _selectedBatteryIds = values);
+                      textStyle: TextStyle(color: scheme.onSurface),
+                      chipColor: scheme.surfaceContainerHigh,
+                      onTap: (value) {
+                        setState(() => _selectedBatteryIds.remove(value));
                       },
                     ),
-                  const SizedBox(height: 20),
+                    onConfirm: (values) {
+                      setState(() => _selectedBatteryIds = values);
+                    },
+                  ),
 
-                  // ── Connection status ──────────────────────────────
+                  // ── Connection status / Go button ──────────────────
                   if (widget.mqttConnected)
                     _StatusBanner(
                       icon: Icons.wifi_rounded,
@@ -234,12 +278,79 @@ class _BatteriesPageState extends State<BatteriesPage> {
                       color: scheme.tertiary,
                       showSpinner: true,
                     )
-                  else
-                    _StatusBanner(
-                      icon: Icons.info_outline_rounded,
-                      label: 'Open Analytics and tap Go to start live monitoring',
-                      color: scheme.tertiary,
+                  else ...[
+                    // BMS type selectors
+                    Text(
+                      'BMS Configuration',
+                      style: theme.textTheme.titleSmall,
                     ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _bms1,
+                            decoration: const InputDecoration(
+                              labelText: 'BMS 1',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            items: bmsOptions
+                                .map(
+                                  (b) => DropdownMenuItem(
+                                    value: b,
+                                    child: Text(b),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) =>
+                                setState(() => _bms1 = v ?? _bms1),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            value: _bms2,
+                            decoration: const InputDecoration(
+                              labelText: 'BMS 2',
+                              border: OutlineInputBorder(),
+                              isDense: true,
+                            ),
+                            items: bmsOptions
+                                .map(
+                                  (b) => DropdownMenuItem(
+                                    value: b,
+                                    child: Text(b),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (v) =>
+                                setState(() => _bms2 = v ?? _bms2),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _handleGo,
+                        icon: const Icon(Icons.play_arrow_rounded),
+                        label: const Text('Go'),
+                        style: FilledButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                        ),
+                      ),
+                    ),
+                    if (widget.statusMessage != null) ...[
+                      const SizedBox(height: 12),
+                      _StatusBanner(
+                        icon: Icons.error_outline_rounded,
+                        label: widget.statusMessage!,
+                        color: scheme.error,
+                      ),
+                    ],
+                  ],
 
                   const SizedBox(height: 20),
 
@@ -274,7 +385,14 @@ class _BatteriesPageState extends State<BatteriesPage> {
                     ...displayBatteries.map(
                       (battery) => Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: BatteryGaugeCard(battery: battery, onTap: null),
+                        child: RepaintBoundary(
+                          key: ValueKey('${battery.id}_rb'),
+                          child: BatteryGaugeCard(
+                            key: ValueKey(battery.id),
+                            battery: battery,
+                            onTap: null,
+                          ),
+                        ),
                       ),
                     )
                   else
@@ -334,12 +452,14 @@ class _StatusBanner extends StatelessWidget {
           else
             Icon(icon, size: 18, color: color),
           const SizedBox(width: 10),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w500,
-              color: color,
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: color,
+              ),
             ),
           ),
         ],

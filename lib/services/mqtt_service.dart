@@ -22,9 +22,9 @@ class MqttService {
   final int port;
 
   MqttService({
-    this.host = MqttConfig.host,
+    String? host,
     this.port = MqttConfig.port,
-  });
+  }) : host = host ?? MqttConfig.host;
 
   Stream<MonitoringPayload> get monitoringStream =>
       _monitoringController.stream;
@@ -37,15 +37,18 @@ class MqttService {
   static Future<bool> publishBmsConfig({
     required String bms1,
     required String bms2,
-    String host = MqttConfig.host,
+    String? host,
     int port = MqttConfig.port,
-    String username = MqttConfig.username,
-    String password = MqttConfig.password,
+    String? username,
+    String? password,
   }) async {
+    final host_ = host ?? MqttConfig.host;
+    final username_ = username ?? MqttConfig.username;
+    final password_ = password ?? MqttConfig.password;
     final clientId =
         'config_${DateTime.now().millisecondsSinceEpoch}_${Random().nextInt(9999)}';
 
-    final client = MqttServerClient.withPort(host, clientId, port);
+    final client = MqttServerClient.withPort(host_, clientId, port);
 
     client.keepAlivePeriod = 20;
     client.connectTimeoutPeriod = 5000;
@@ -54,7 +57,7 @@ class MqttService {
 
     client.connectionMessage = MqttConnectMessage()
         .withClientIdentifier(clientId)
-        .authenticateAs(username, password)
+        .authenticateAs(username_, password_)
         .startClean();
 
     try {
@@ -106,10 +109,12 @@ class MqttService {
   /// Connect for Live Monitoring
   /// -------------------------------
   Future<bool> connectMonitoring({
-    String username = MqttConfig.username,
-    String password = MqttConfig.password,
+    String? username,
+    String? password,
     String topic = MqttConfig.monitoringTopic,
   }) async {
+    final username_ = username ?? MqttConfig.username;
+    final password_ = password ?? MqttConfig.password;
     if (_isConnected) return true;
 
     disconnect();
@@ -125,25 +130,48 @@ class MqttService {
 
     _client!
       ..logging(on: true)
-      ..keepAlivePeriod = 30
+      ..keepAlivePeriod = 10
       ..connectTimeoutPeriod = 5000
       ..autoReconnect = true
       ..setProtocolV311();
 
     _client!.connectionMessage = MqttConnectMessage()
         .withClientIdentifier(clientId)
-        .authenticateAs(username, password)
-        .startClean()
-        .withWillQos(MqttQos.atLeastOnce);
+        .authenticateAs(username_, password_)
+        .startClean();
+
+    void setupSubscription() {
+      final updates = _client?.updates;
+      if (updates == null) {
+        print("Updates stream not available, retrying...");
+        Future.delayed(const Duration(seconds: 1), setupSubscription);
+        return;
+      }
+      _client!.subscribe(topic, MqttQos.atLeastOnce);
+      _updatesSub?.cancel();
+      _updatesSub = updates.listen(
+        _onMessage,
+        onError: (error) {
+          print("Updates stream error: $error");
+          _isConnected = false;
+        },
+        onDone: () {
+          print("Updates stream closed");
+          _isConnected = false;
+        },
+        cancelOnError: false,
+      );
+    }
 
     _client!.onConnected = () {
-      _isConnected = true;
       print("MQTT Connected");
+      _isConnected = true;
+      setupSubscription();
     };
 
     _client!.onDisconnected = () {
-      _isConnected = false;
       print("MQTT Disconnected");
+      _isConnected = false;
     };
 
     _client!.onAutoReconnect = () {
@@ -152,11 +180,7 @@ class MqttService {
 
     _client!.onAutoReconnected = () {
       print("Reconnected");
-
-      _client!.subscribe(
-        topic,
-        MqttQos.atLeastOnce,
-      );
+      setupSubscription();
     };
 
     _client!.pongCallback = () {
@@ -184,15 +208,6 @@ class MqttService {
       return false;
     }
 
-    print("Subscribing to $topic");
-
-    _client!.subscribe(
-      topic,
-      MqttQos.atLeastOnce,
-    );
-
-    _updatesSub = _client!.updates!.listen(_onMessage);
-
     return true;
   }
 
@@ -204,6 +219,10 @@ class MqttService {
   ) {
     for (final msg in messages) {
       if (msg.topic != MqttConfig.monitoringTopic) {
+        continue;
+      }
+
+      if (msg.payload is! MqttPublishMessage) {
         continue;
       }
 

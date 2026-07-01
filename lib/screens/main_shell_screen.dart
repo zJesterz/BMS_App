@@ -66,7 +66,10 @@ class _MainShellScreenState extends State<MainShellScreen> {
       if (!configOk) {
         setState(() {
           _mqttConnecting = false;
-          _statusMessage = 'Failed to publish BMS config';
+          _statusMessage =
+              'Could not connect to MQTT broker — check '
+              'that mqtt.openioe.in:1883 is reachable '
+              'and your credentials are valid';
         });
         return;
       }
@@ -84,7 +87,9 @@ class _MainShellScreenState extends State<MainShellScreen> {
         setState(() {
           _mqttConnecting = false;
           _mqttConnected = false;
-          _statusMessage = 'MQTT connection failed';
+          _statusMessage =
+              'MQTT connection failed — broker unreachable'
+              ' or credentials rejected';
         });
         return;
       }
@@ -101,11 +106,11 @@ class _MainShellScreenState extends State<MainShellScreen> {
       });
 
       _loadBatteries();
-    } catch (_) {
+    } catch (e) {
       setState(() {
         _mqttConnecting = false;
         _mqttConnected = false;
-        _statusMessage = 'MQTT connection failed';
+        _statusMessage = 'MQTT error: $e';
       });
     }
   }
@@ -143,8 +148,21 @@ class _MainShellScreenState extends State<MainShellScreen> {
   }
 
   Future<void> _onRefresh() async {
+    _mqttService?.dispose();
+    _mqttService = null;
+    if (_batteryService is MqttBatteryService) {
+      (_batteryService as MqttBatteryService).dispose();
+    }
+    _batteryService = widget.batteryService ?? MockBatteryService();
     final list = await _batteryService.fetchBatteries();
-    if (mounted) setState(() => _batteries = list);
+    if (mounted) {
+      setState(() {
+        _batteries = list;
+        _mqttConnected = false;
+        _mqttConnecting = false;
+        _statusMessage = null;
+      });
+    }
   }
 
   void _onNavSelected(int index) {
@@ -182,6 +200,8 @@ class _MainShellScreenState extends State<MainShellScreen> {
           mqttConnected: _mqttConnected,
           mqttConnecting: _mqttConnecting,
           batteryUpdateTick: _batteryUpdateTick,
+          onGo: _startMonitoring,
+          statusMessage: _statusMessage,
         );
       case 2:
         return AnalyticsPage(

@@ -9,133 +9,204 @@ class BatteryGaugeCard extends StatelessWidget {
   final Battery battery;
   final VoidCallback? onTap;
 
-  Color _socColor(ColorScheme scheme) {
-    if (battery.percentage <= 20) return scheme.error;
-    if (battery.percentage <= 40) return scheme.tertiary;
-    return scheme.primary;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-    final socColor = _socColor(scheme);
-
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // ── Circular SOC gauge ──────────────────────────────
-              SizedBox(
-                width: 90,
-                height: 90,
-                child: CustomPaint(
-                  painter: _GaugePainter(
-                    value: battery.percentage / 100,
-                    color: socColor,
-                    trackColor: scheme.surfaceContainerHighest,
-                  ),
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          '${battery.percentage.toStringAsFixed(0)}%',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w700,
-                            color: socColor,
-                          ),
-                        ),
-                        Text(
-                          'SOC',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-
-              const SizedBox(width: 16),
-
-              // ── Right side: name + metrics ───────────────────────
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Title + status chip
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            battery.name,
-                            style: theme.textTheme.titleSmall,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        _StatusChip(status: battery.status),
-                      ],
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    // Voltage + Current side by side
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _MetricRow(
-                            icon: Icons.bolt_rounded,
-                            label: 'Voltage',
-                            value: '${battery.voltage.toStringAsFixed(1)} V',
-                            color: scheme.primary,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _MetricRow(
-                            icon: Icons.electric_bolt_rounded,
-                            label: 'Current',
-                            value: '${battery.current.toStringAsFixed(1)} A',
-                            color: scheme.secondary,
-                          ),
-                        ),
-                      ],
-                    ),
-
-                    const SizedBox(height: 6),
-
-                    // Last updated
-                    Row(
-                      children: [
-                        Icon(
-                          Icons.update_rounded,
-                          size: 12,
-                          color: scheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(width: 4),
-                        Text(
-                          _formatUpdated(battery.lastUpdated),
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            color: scheme.onSurfaceVariant,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
+              _AnimatedGauge(battery: battery),
+              const SizedBox(width: 20),
+              Expanded(child: _StaticInfo(battery: battery)),
             ],
           ),
         ),
       ),
+    );
+  }
+}
+
+// ── Smooth gauge with animated SOC ────────────────────────────────────────
+
+class _AnimatedGauge extends StatelessWidget {
+  const _AnimatedGauge({required this.battery});
+
+  final Battery battery;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final socColor = _socColor(scheme, battery.percentage);
+
+    return RepaintBoundary(
+      child: SizedBox(
+        width: 120,
+        height: 120,
+        child: TweenAnimationBuilder<double>(
+          tween: Tween<double>(begin: battery.percentage, end: battery.percentage),
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeOutCubic,
+          builder: (context, value, child) {
+            return CustomPaint(
+              painter: _GaugePainter(
+                value: value / 100,
+                color: socColor,
+                trackColor: scheme.surfaceContainerHighest,
+              ),
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      '${value.toStringAsFixed(0)}%',
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: socColor,
+                      ),
+                    ),
+                    Text(
+                      'SOC',
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: scheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Color _socColor(ColorScheme scheme, double percentage) {
+    if (percentage <= 20) return scheme.error;
+    if (percentage <= 40) return scheme.tertiary;
+    return scheme.primary;
+  }
+}
+
+// ── Static info section (name, metrics, timestamp) ───────────────────────
+
+class _StaticInfo extends StatelessWidget {
+  const _StaticInfo({required this.battery});
+
+  final Battery battery;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          battery.name,
+          style: theme.textTheme.titleSmall,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _SimpleMetric(
+                label: 'Voltage',
+                value: '${battery.voltage.toStringAsFixed(1)} V',
+                color: scheme.primary,
+              ),
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: _SimpleMetric(
+                label: 'Current',
+                value: '${battery.current.toStringAsFixed(1)} A',
+                color: scheme.secondary,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 6),
+        RepaintBoundary(
+          child: _UpdatedTime(lastUpdated: battery.lastUpdated),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Simple metric row ───────────────────────────────────────────────────
+
+class _SimpleMetric extends StatelessWidget {
+  const _SimpleMetric({
+    required this.label,
+    required this.value,
+    required this.color,
+  });
+
+  final String label;
+  final String value;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.labelSmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+            color: color,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ── Updated time ─────────────────────────────────────────────────────────
+
+class _UpdatedTime extends StatelessWidget {
+  const _UpdatedTime({required this.lastUpdated});
+
+  final DateTime lastUpdated;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+
+    return Row(
+      children: [
+        Icon(
+          Icons.update_rounded,
+          size: 12,
+          color: scheme.onSurfaceVariant,
+        ),
+        const SizedBox(width: 4),
+        Text(
+          _formatUpdated(lastUpdated),
+          style: Theme.of(context).textTheme.labelSmall?.copyWith(
+            color: scheme.onSurfaceVariant,
+          ),
+        ),
+      ],
     );
   }
 
@@ -201,96 +272,4 @@ class _GaugePainter extends CustomPainter {
   @override
   bool shouldRepaint(_GaugePainter old) =>
       old.value != value || old.color != color;
-}
-
-// ── Metric row ────────────────────────────────────────────────────────────
-
-class _MetricRow extends StatelessWidget {
-  const _MetricRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-    required this.color,
-  });
-
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color color;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
-
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(5),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            borderRadius: BorderRadius.circular(6),
-          ),
-          child: Icon(icon, size: 13, color: color),
-        ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                label,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: scheme.onSurfaceVariant,
-                ),
-              ),
-              Text(
-                value,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-// ── Status chip ───────────────────────────────────────────────────────────
-
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.status});
-
-  final BatteryStatus status;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
-    final (label, color) = switch (status) {
-      BatteryStatus.charging => ('Charging', scheme.primary),
-      BatteryStatus.discharging => ('Discharging', scheme.secondary),
-      BatteryStatus.idle => ('Idle', scheme.tertiary),
-      BatteryStatus.fault => ('Fault', scheme.error),
-    };
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Text(
-        label,
-        style: TextStyle(
-          fontSize: 10,
-          fontWeight: FontWeight.w600,
-          color: color,
-        ),
-      ),
-    );
-  }
 }
