@@ -1,11 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
-enum AuthResult {
-  success,
-  invalidCredentials,
-  emailAlreadyInUse,
-  weakPassword,
-}
+enum AuthResult { success, invalidCredentials, emailAlreadyInUse, weakPassword }
 
 abstract class AuthService {
   Future<AuthResult> login(String username, String password);
@@ -20,6 +15,8 @@ class FirebaseAuthService implements AuthService {
 
   @override
   String? get currentUserEmail => _auth.currentUser?.email;
+
+  @override
   Future<AuthResult> login(String username, String password) async {
     try {
       await _auth.signInWithEmailAndPassword(
@@ -65,6 +62,8 @@ class MockAuthService implements AuthService {
 
   @override
   String? get currentUserEmail => 'admin';
+
+  @override
   Future<AuthResult> login(String username, String password) async {
     await Future<void>.delayed(const Duration(milliseconds: 400));
     if (username == _mockUsername && password == _mockPassword) {

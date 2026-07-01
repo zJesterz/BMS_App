@@ -30,13 +30,9 @@ class EvService {
   final _db = FirebaseFirestore.instance;
 
   Future<List<EvConfig>> getEvsForUser(String email) async {
-    final snapshot = await _db
-        .collection('evs')
-        .where('useremail', isEqualTo: email)
-        .get();
+    final snapshot =
+        await _db.collection('evs').where('useremail', isEqualTo: email).get();
 
-    return snapshot.docs
-        .map((doc) => EvConfig.fromMap(doc.data()))
-        .toList();
+    return snapshot.docs.map((doc) => EvConfig.fromMap(doc.data())).toList();
   }
 }

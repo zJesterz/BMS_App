@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:multi_select_flutter/multi_select_flutter.dart';
 
 import '../models/battery.dart';
 import '../services/auth_service.dart';
@@ -14,7 +15,6 @@ class BatteriesPage extends StatefulWidget {
     required this.onRefresh,
     this.mqttConnected = false,
     this.mqttConnecting = false,
-    this.onStartMqtt,
     this.batteryUpdateTick = 0,
   });
 
@@ -23,7 +23,6 @@ class BatteriesPage extends StatefulWidget {
   final Future<void> Function() onRefresh;
   final bool mqttConnected;
   final bool mqttConnecting;
-  final Future<void> Function(String evId)? onStartMqtt;
   final int batteryUpdateTick;
 
   @override
@@ -33,6 +32,7 @@ class BatteriesPage extends StatefulWidget {
 class _BatteriesPageState extends State<BatteriesPage> {
   List<EvConfig> _evConfigs = [];
   String? _selectedEvId;
+  List<String> _selectedBatteryIds = [];
   List<Battery> _batteries = [];
   bool _loading = true;
 
@@ -68,26 +68,36 @@ class _BatteriesPageState extends State<BatteriesPage> {
     final all = await widget.batteryService.fetchBatteries();
 
     if (_evConfigs.isEmpty && all.isNotEmpty) {
-      final evIds = all
-          .map((b) => b.id.contains('-') ? b.id.split('-').first : b.id)
-          .toSet()
-          .toList()
-        ..sort();
-      _evConfigs = evIds
-          .map((id) => EvConfig(
-                evid: id,
-                mqttClient: '',
-                mqttUsername: '',
-                mqttPassword: '',
-                iotEndpoint: '',
-              ))
-          .toList();
+      final evIds =
+          all
+              .map((b) => b.id.contains('-') ? b.id.split('-').first : b.id)
+              .toSet()
+              .toList()
+            ..sort();
+      _evConfigs =
+          evIds
+              .map(
+                (id) => EvConfig(
+                  evid: id,
+                  mqttClient: '',
+                  mqttUsername: '',
+                  mqttPassword: '',
+                  iotEndpoint: '',
+                ),
+              )
+              .toList();
       _selectedEvId ??= _evConfigs.first.evid;
     }
 
     setState(() {
       _batteries = all;
       _loading = false;
+      if (widget.mqttConnected && _selectedBatteryIds.isEmpty) {
+        final evPacks = _evBatteries;
+        if (evPacks.isNotEmpty) {
+          _selectedBatteryIds = evPacks.map((b) => b.id).toList();
+        }
+      }
     });
   }
 
@@ -105,15 +115,21 @@ class _BatteriesPageState extends State<BatteriesPage> {
       ..sort((a, b) => a.id.compareTo(b.id));
   }
 
+  List<Battery> get _selectedBatteries {
+    if (_selectedBatteryIds.isEmpty) return [];
+    return _batteries.where((b) => _selectedBatteryIds.contains(b.id)).toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final scheme = theme.colorScheme;
     final evBatteries = _evBatteries;
-    final canStart = !widget.mqttConnected &&
-        !widget.mqttConnecting &&
-        _selectedEvId != null &&
-        widget.onStartMqtt != null;
+    final displayBatteries =
+        widget.mqttConnected && _selectedBatteryIds.isEmpty
+            ? evBatteries
+            : _selectedBatteries;
 
     return RefreshIndicator(
       onRefresh: _onRefresh,
@@ -137,13 +153,16 @@ class _BatteriesPageState extends State<BatteriesPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Live Telemetry',
-                            style: theme.textTheme.headlineMedium),
+                        Text(
+                          'Live Telemetry',
+                          style: theme.textTheme.headlineMedium,
+                        ),
                         const SizedBox(height: 4),
                         Text(
-                          'Battery packs for selected EV',
-                          style: theme.textTheme.bodyMedium
-                              ?.copyWith(color: scheme.onSurfaceVariant),
+                          'Live battery pack telemetry',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),
@@ -152,7 +171,7 @@ class _BatteriesPageState extends State<BatteriesPage> {
                   // ── EV selector ────────────────────────────────────
                   if (_evConfigs.isNotEmpty)
                     DropdownButtonFormField<String>(
-                      value: _selectedEvId,
+                      initialValue: _selectedEvId,
                       decoration: InputDecoration(
                         labelText: 'Select EV',
                         prefixIcon: const Icon(Icons.electric_car_rounded),
@@ -162,22 +181,46 @@ class _BatteriesPageState extends State<BatteriesPage> {
                         filled: true,
                         fillColor: scheme.surfaceContainerLow,
                         contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 10),
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                       ),
-                      items: _evConfigs.map((ev) {
-                        return DropdownMenuItem(
-                          value: ev.evid,
-                          child: Text(ev.evid),
-                        );
-                      }).toList(),
-                      onChanged: widget.mqttConnected
-                          ? null
-                          : (id) => setState(() => _selectedEvId = id),
+                      items:
+                          _evConfigs.map((ev) {
+                            return DropdownMenuItem(
+                              value: ev.evid,
+                              child: Text(ev.evid),
+                            );
+                          }).toList(),
+                      onChanged:
+                          widget.mqttConnected
+                              ? null
+                              : (id) => setState(() {
+                                    _selectedEvId = id;
+                                    _selectedBatteryIds = [];
+                                  }),
                     ),
 
                   const SizedBox(height: 12),
 
-                  // ── Start / status button ──────────────────────────
+                  // ── Battery pack multi-select ──────────────────────
+                  if (evBatteries.isNotEmpty)
+                    MultiSelectDialogField<String>(
+                      items: evBatteries
+                          .map((b) => MultiSelectItem<String>(b.id, b.name))
+                          .toList(),
+                      title: const Text('Select Battery Packs'),
+                      buttonText: const Text('Choose Battery Packs'),
+                      initialValue: _selectedBatteryIds,
+                      searchable: false,
+                      dialogHeight: 400,
+                      onConfirm: (values) {
+                        setState(() => _selectedBatteryIds = values);
+                      },
+                    ),
+                  const SizedBox(height: 20),
+
+                  // ── Connection status ──────────────────────────────
                   if (widget.mqttConnected)
                     _StatusBanner(
                       icon: Icons.wifi_rounded,
@@ -192,21 +235,10 @@ class _BatteriesPageState extends State<BatteriesPage> {
                       showSpinner: true,
                     )
                   else
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: canStart
-                            ? () => widget.onStartMqtt!(_selectedEvId!)
-                            : null,
-                        icon: const Icon(Icons.play_arrow_rounded),
-                        label: const Text('Start Live Monitoring'),
-                        style: FilledButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                        ),
-                      ),
+                    _StatusBanner(
+                      icon: Icons.info_outline_rounded,
+                      label: 'Open Analytics and tap Go to start live monitoring',
+                      color: scheme.tertiary,
                     ),
 
                   const SizedBox(height: 20),
@@ -220,27 +252,40 @@ class _BatteriesPageState extends State<BatteriesPage> {
                         padding: const EdgeInsets.only(top: 48),
                         child: Column(
                           children: [
-                            Icon(Icons.battery_unknown_rounded,
-                                size: 48, color: scheme.onSurfaceVariant),
+                            Icon(
+                              Icons.battery_unknown_rounded,
+                              size: 48,
+                              color: scheme.onSurfaceVariant,
+                            ),
                             const SizedBox(height: 12),
                             Text(
                               _selectedEvId == null
                                   ? 'No EV selected'
                                   : 'No battery data for $_selectedEvId',
-                              style: theme.textTheme.bodyMedium
-                                  ?.copyWith(color: scheme.onSurfaceVariant),
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: scheme.onSurfaceVariant,
+                              ),
                             ),
                           ],
                         ),
                       ),
                     )
-                  else
-                    ...evBatteries.map(
+                  else if (displayBatteries.isNotEmpty)
+                    ...displayBatteries.map(
                       (battery) => Padding(
                         padding: const EdgeInsets.only(bottom: 16),
-                        child: BatteryGaugeCard(
-                          battery: battery,
-                          onTap: null,
+                        child: BatteryGaugeCard(battery: battery, onTap: null),
+                      ),
+                    )
+                  else
+                    Center(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 32),
+                        child: Text(
+                          'Select battery packs above',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
                       ),
                     ),

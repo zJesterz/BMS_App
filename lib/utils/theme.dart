@@ -34,18 +34,21 @@ class AppTheme {
         ),
       ),
       cardTheme: CardThemeData(
-  elevation: 0,
-  color: colorScheme.surface,
-  shape: RoundedRectangleBorder(
-    borderRadius: BorderRadius.circular(20),
-    side: BorderSide(
-      color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-    ),
-  ),
-  margin: EdgeInsets.zero,
-),
+        elevation: 0,
+        color: colorScheme.surface,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color: colorScheme.outlineVariant.withValues(alpha: 0.6),
+          ),
+        ),
+        margin: EdgeInsets.zero,
+      ),
       textTheme: const TextTheme(
-        headlineMedium: TextStyle(fontWeight: FontWeight.w700, letterSpacing: -0.5),
+        headlineMedium: TextStyle(
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.5,
+        ),
         titleLarge: TextStyle(fontWeight: FontWeight.w600),
         titleMedium: TextStyle(fontWeight: FontWeight.w600),
         bodyLarge: TextStyle(fontWeight: FontWeight.w500),

@@ -5,12 +5,10 @@ import 'package:battery_monitor/main.dart';
 import 'package:battery_monitor/services/auth_service.dart';
 
 void main() {
-  testWidgets('Login flow shows dashboard with mock battery data', (WidgetTester tester) async {
-    await tester.pumpWidget(
-      BatteryMonitorApp(
-        authService: MockAuthService(),
-      ),
-    );
+  testWidgets('Login flow shows dashboard with mock battery data', (
+    WidgetTester tester,
+  ) async {
+    await tester.pumpWidget(BatteryMonitorApp(authService: MockAuthService()));
 
     expect(find.text('Sign In'), findsOneWidget);
 
@@ -25,10 +23,8 @@ void main() {
     await tester.tap(find.text('Sign In'));
     await tester.pumpAndSettle();
 
-    // Dashboard DataTable shows mock batteries.
-    expect(find.text('Main Battery'), findsOneWidget);
-    expect(find.text('Backup Battery'), findsOneWidget);
-    // DataTable columns: Battery, Voltage, SOC, plus 2 battery rows.
+    expect(find.text('EV0001 — Pack 1'), findsOneWidget);
+    expect(find.text('EV0001 — Pack 2'), findsOneWidget);
     expect(find.text('SOC'), findsOneWidget);
     expect(find.text('Voltage'), findsOneWidget);
   });

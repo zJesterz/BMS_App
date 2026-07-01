@@ -25,10 +25,7 @@ class SettingsPanel extends StatelessWidget {
                   Icon(Icons.settings_rounded, color: scheme.primary),
                   const SizedBox(width: 12),
                   Expanded(
-                    child: Text(
-                      'Settings',
-                      style: theme.textTheme.titleLarge,
-                    ),
+                    child: Text('Settings', style: theme.textTheme.titleLarge),
                   ),
                   IconButton(
                     tooltip: 'Close',
@@ -59,16 +56,19 @@ class SettingsPanel extends StatelessWidget {
                   ),
                   const Divider(indent: 16, endIndent: 16),
                   ListTile(
-                  leading: Icon(Icons.info_outline_rounded, color: scheme.primary),
-                  title: const Text('About'),
-                  subtitle: const Text('Battery Monitor v1.0.0'),
-                  onTap: () {
-                  Navigator.of(context).pop(); // close drawer
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (_) => const AboutScreen()),
-                  );
-                },
-                ),
+                    leading: Icon(
+                      Icons.info_outline_rounded,
+                      color: scheme.primary,
+                    ),
+                    title: const Text('About'),
+                    subtitle: const Text('Battery Monitor v1.0.0'),
+                    onTap: () {
+                      Navigator.of(context).pop(); // close drawer
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (_) => const AboutScreen()),
+                      );
+                    },
+                  ),
                 ],
               ),
             ),

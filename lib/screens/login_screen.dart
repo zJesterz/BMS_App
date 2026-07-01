@@ -5,11 +5,7 @@ import '../services/auth_service.dart';
 import 'main_shell_screen.dart';
 
 class LoginScreen extends StatefulWidget {
-  const LoginScreen({
-    super.key,
-    this.authService,
-    this.batteryService,
-  });
+  const LoginScreen({super.key, this.authService, this.batteryService});
 
   final AuthService? authService;
   final BatteryService? batteryService;
@@ -78,19 +74,21 @@ class _LoginScreenState extends State<LoginScreen> {
     final username = _usernameController.text.trim();
     final password = _passwordController.text;
 
-    final result = _isSignUp
-        ? await _authService.register(username, password)
-        : await _authService.login(username, password);
+    final result =
+        _isSignUp
+            ? await _authService.register(username, password)
+            : await _authService.login(username, password);
 
     if (!mounted) return;
 
     if (result == AuthResult.success) {
       await Navigator.of(context).pushReplacement(
         MaterialPageRoute<void>(
-          builder: (_) => MainShellScreen(
-            authService: _authService,
-            batteryService: widget.batteryService,
-          ),
+          builder:
+              (_) => MainShellScreen(
+                authService: _authService,
+                batteryService: widget.batteryService,
+              ),
         ),
       );
       return;
@@ -120,16 +118,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 children: [
                   // Branding
                   Container(
+                    width: 90,
+                    height: 90,
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
                       color: scheme.primaryContainer.withValues(alpha: 0.45),
-                      borderRadius: BorderRadius.circular(2),
+                      shape: BoxShape.circle,
                     ),
-                    child: Image.asset(
-                      'assets/innovmon_logo.avif',
-                      width: 90,
-                      height: 90,
-                      fit: BoxFit.contain,
+                    child: ClipOval(
+                      child: Image.asset(
+                        'assets/innovmon_logo.avif',
+                        width: 90,
+                        height: 90,
+                        fit: BoxFit.cover,
+                      ),
                     ),
                   ),
                   const SizedBox(height: 24),
@@ -143,9 +145,10 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 8),
                   TextType(
-                    text: _isSignUp
-                        ? 'Create an account to get started'
-                        : 'Sign in to access the dashboard',
+                    text:
+                        _isSignUp
+                            ? 'Create an account to get started'
+                            : 'Sign in to access the dashboard',
                     typingSpeed: const Duration(milliseconds: 55),
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: Colors.black54,
@@ -181,7 +184,9 @@ class _LoginScreenState extends State<LoginScreen> {
                               autocorrect: false,
                               decoration: InputDecoration(
                                 labelText: 'Username',
-                                prefixIcon: const Icon(Icons.person_outline_rounded),
+                                prefixIcon: const Icon(
+                                  Icons.person_outline_rounded,
+                                ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
@@ -206,18 +211,25 @@ class _LoginScreenState extends State<LoginScreen> {
                               onFieldSubmitted: (_) => _handleSubmit(),
                               decoration: InputDecoration(
                                 labelText: 'Password',
-                                prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                prefixIcon: const Icon(
+                                  Icons.lock_outline_rounded,
+                                ),
                                 border: OutlineInputBorder(
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 filled: true,
                                 fillColor: const Color(0xFFF9F9F9),
                                 suffixIcon: IconButton(
-                                  tooltip: _obscurePassword
-                                      ? 'Show password'
-                                      : 'Hide password',
-                                  onPressed: () => setState(
-                                      () => _obscurePassword = !_obscurePassword),
+                                  tooltip:
+                                      _obscurePassword
+                                          ? 'Show password'
+                                          : 'Hide password',
+                                  onPressed:
+                                      () => setState(
+                                        () =>
+                                            _obscurePassword =
+                                                !_obscurePassword,
+                                      ),
                                   icon: Icon(
                                     _obscurePassword
                                         ? Icons.visibility_outlined
@@ -244,18 +256,25 @@ class _LoginScreenState extends State<LoginScreen> {
                                 onFieldSubmitted: (_) => _handleSubmit(),
                                 decoration: InputDecoration(
                                   labelText: 'Confirm Password',
-                                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                                  prefixIcon: const Icon(
+                                    Icons.lock_outline_rounded,
+                                  ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   filled: true,
                                   fillColor: const Color(0xFFF9F9F9),
                                   suffixIcon: IconButton(
-                                    tooltip: _obscureConfirmPassword
-                                        ? 'Show password'
-                                        : 'Hide password',
-                                    onPressed: () => setState(
-                                        () => _obscureConfirmPassword = !_obscureConfirmPassword),
+                                    tooltip:
+                                        _obscureConfirmPassword
+                                            ? 'Show password'
+                                            : 'Hide password',
+                                    onPressed:
+                                        () => setState(
+                                          () =>
+                                              _obscureConfirmPassword =
+                                                  !_obscureConfirmPassword,
+                                        ),
                                     icon: Icon(
                                       _obscureConfirmPassword
                                           ? Icons.visibility_outlined
@@ -291,22 +310,24 @@ class _LoginScreenState extends State<LoginScreen> {
                             FilledButton(
                               onPressed: _isLoading ? null : _handleSubmit,
                               style: FilledButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 16),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
-                              child: _isLoading
-                                  ? SizedBox(
-                                      height: 20,
-                                      width: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: scheme.onPrimary,
-                                      ),
-                                    )
-                                  : Text(_isSignUp ? 'Sign Up' : 'Sign In'),
+                              child:
+                                  _isLoading
+                                      ? SizedBox(
+                                        height: 20,
+                                        width: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: scheme.onPrimary,
+                                        ),
+                                      )
+                                      : Text(_isSignUp ? 'Sign Up' : 'Sign In'),
                             ),
                             const SizedBox(height: 16),
                             TextButton(

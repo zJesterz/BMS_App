@@ -66,10 +66,12 @@ class Battery {
     double? temperature,
     BatteryStatus? status,
     DateTime? lastUpdated,
+    String? ownerEmail,
   }) {
     return Battery(
       id: id ?? this.id,
       name: name ?? this.name,
+      ownerEmail: ownerEmail ?? this.ownerEmail,
       percentage: percentage ?? this.percentage,
       voltage: voltage ?? this.voltage,
       current: current ?? this.current,

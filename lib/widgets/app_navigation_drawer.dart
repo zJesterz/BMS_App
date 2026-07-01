@@ -12,11 +12,11 @@ class AppNavigationDrawer extends StatelessWidget {
   final ValueChanged<int> onDestinationSelected;
 
   static const destinations = <({IconData icon, String label})>[
-  (icon: Icons.dashboard_rounded, label: 'Dashboard'),
-  (icon: Icons.battery_charging_full_rounded, label: 'Batteries'),
-  (icon: Icons.analytics_outlined, label: 'Analytics'),
-  (icon: Icons.history_rounded, label: 'History'),
-];
+    (icon: Icons.dashboard_rounded, label: 'Dashboard'),
+    (icon: Icons.battery_charging_full_rounded, label: 'Batteries'),
+    (icon: Icons.analytics_outlined, label: 'Analytics'),
+    (icon: Icons.history_rounded, label: 'History'),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +32,11 @@ class AppNavigationDrawer extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(Icons.battery_charging_full_rounded, color: scheme.primary, size: 32),
+              Icon(
+                Icons.battery_charging_full_rounded,
+                color: scheme.primary,
+                size: 32,
+              ),
               const SizedBox(height: 12),
               Text('Battery Monitor', style: theme.textTheme.titleMedium),
               const SizedBox(height: 4),

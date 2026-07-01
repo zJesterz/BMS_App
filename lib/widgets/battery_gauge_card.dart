@@ -4,11 +4,7 @@ import 'dart:math' as math;
 import '../models/battery.dart';
 
 class BatteryGaugeCard extends StatelessWidget {
-  const BatteryGaugeCard({
-    super.key,
-    required this.battery,
-    this.onTap,
-  });
+  const BatteryGaugeCard({super.key, required this.battery, this.onTap});
 
   final Battery battery;
   final VoidCallback? onTap;
@@ -119,13 +115,17 @@ class BatteryGaugeCard extends StatelessWidget {
                     // Last updated
                     Row(
                       children: [
-                        Icon(Icons.update_rounded,
-                            size: 12, color: scheme.onSurfaceVariant),
+                        Icon(
+                          Icons.update_rounded,
+                          size: 12,
+                          color: scheme.onSurfaceVariant,
+                        ),
                         const SizedBox(width: 4),
                         Text(
                           _formatUpdated(battery.lastUpdated),
-                          style: theme.textTheme.labelSmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
+                          style: theme.textTheme.labelSmall?.copyWith(
+                            color: scheme.onSurfaceVariant,
+                          ),
                         ),
                       ],
                     ),
@@ -172,7 +172,10 @@ class _GaugePainter extends CustomPainter {
     );
 
     canvas.drawArc(
-      rect, startAngle, sweepFull, false,
+      rect,
+      startAngle,
+      sweepFull,
+      false,
       Paint()
         ..color = trackColor
         ..style = PaintingStyle.stroke
@@ -182,7 +185,10 @@ class _GaugePainter extends CustomPainter {
 
     if (value > 0) {
       canvas.drawArc(
-        rect, startAngle, sweepFull * value.clamp(0.0, 1.0), false,
+        rect,
+        startAngle,
+        sweepFull * value.clamp(0.0, 1.0),
+        false,
         Paint()
           ..color = color
           ..style = PaintingStyle.stroke
@@ -234,13 +240,15 @@ class _MetricRow extends StatelessWidget {
             children: [
               Text(
                 label,
-                style: theme.textTheme.labelSmall
-                    ?.copyWith(color: scheme.onSurfaceVariant),
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: scheme.onSurfaceVariant,
+                ),
               ),
               Text(
                 value,
-                style: theme.textTheme.bodySmall
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
@@ -262,10 +270,10 @@ class _StatusChip extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
 
     final (label, color) = switch (status) {
-      BatteryStatus.charging    => ('Charging',    scheme.primary),
+      BatteryStatus.charging => ('Charging', scheme.primary),
       BatteryStatus.discharging => ('Discharging', scheme.secondary),
-      BatteryStatus.idle        => ('Idle',         scheme.tertiary),
-      BatteryStatus.fault       => ('Fault',        scheme.error),
+      BatteryStatus.idle => ('Idle', scheme.tertiary),
+      BatteryStatus.fault => ('Fault', scheme.error),
     };
 
     return Container(

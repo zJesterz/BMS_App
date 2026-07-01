@@ -22,6 +22,7 @@ class TextType extends StatefulWidget {
 class _TextTypeState extends State<TextType> {
   String _displayedText = '';
   Timer? _timer;
+  Timer? _cursorTimer;
   int _currentIndex = 0;
   bool _showCursor = true;
 
@@ -38,13 +39,12 @@ class _TextTypeState extends State<TextType> {
       if (_currentIndex < widget.text.length) {
         setState(() {
           _currentIndex++;
-          _displayedText =
-              widget.text.substring(0, _currentIndex);
+          _displayedText = widget.text.substring(0, _currentIndex);
         });
       } else {
         timer.cancel();
 
-        Future.delayed(const Duration(milliseconds: 500), () {
+        _cursorTimer = Timer(const Duration(milliseconds: 500), () {
           if (mounted) {
             setState(() {
               _showCursor = false;
@@ -58,6 +58,7 @@ class _TextTypeState extends State<TextType> {
   @override
   void dispose() {
     _timer?.cancel();
+    _cursorTimer?.cancel();
     super.dispose();
   }
 
@@ -68,8 +69,7 @@ class _TextTypeState extends State<TextType> {
         style: widget.style,
         children: [
           TextSpan(text: _displayedText),
-          if (widget.showCursor && _showCursor)
-            const TextSpan(text: '|'),
+          if (widget.showCursor && _showCursor) const TextSpan(text: '|'),
         ],
       ),
     );

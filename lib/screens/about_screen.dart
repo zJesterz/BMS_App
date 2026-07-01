@@ -15,13 +15,12 @@ class AboutScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
-            // Logo placeholder — replace with Image.asset when you send the logo
             ClipOval(
               child: Image.asset(
-                'assets/logo.jpg',
+                'assets/innovmon_logo.avif',
                 width: 150,
                 height: 150,
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
               ),
             ),
             const SizedBox(height: 24),
@@ -55,29 +54,39 @@ class AboutScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Contact Us',
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: const Color.fromARGB(255, 180, 70, 11),
-                        )),
+                    Text(
+                      'Contact Us',
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: const Color.fromARGB(255, 180, 70, 11),
+                      ),
+                    ),
                     const SizedBox(height: 12),
-                    Row(children: [
-                      const Icon(Icons.person_outline_rounded, size: 20),
-                      const SizedBox(width: 8),
-                      Text('${AboutInfo.contactName} — ${AboutInfo.contactRole}'),
-                    ]),
+                    Row(
+                      children: [
+                        const Icon(Icons.person_outline_rounded, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${AboutInfo.contactName} — ${AboutInfo.contactRole}',
+                        ),
+                      ],
+                    ),
                     const SizedBox(height: 8),
-                    Row(children: [
-                      const Icon(Icons.email_outlined, size: 20),
-                      const SizedBox(width: 8),
-                      Text(AboutInfo.contactEmail),
-                    ]),
+                    Row(
+                      children: [
+                        const Icon(Icons.email_outlined, size: 20),
+                        const SizedBox(width: 8),
+                        Text(AboutInfo.contactEmail),
+                      ],
+                    ),
                     const SizedBox(height: 8),
-                    Row(children: [
-                      const Icon(Icons.phone_outlined, size: 20),
-                      const SizedBox(width: 8),
-                      Text(AboutInfo.contactPhone),
-                    ]),
+                    Row(
+                      children: [
+                        const Icon(Icons.phone_outlined, size: 20),
+                        const SizedBox(width: 8),
+                        Text(AboutInfo.contactPhone),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -86,11 +95,15 @@ class AboutScreen extends StatelessWidget {
 
             Text(
               'Developed by ${AboutInfo.developerCompany}',
-              style: theme.textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+              style: theme.textTheme.bodySmall?.copyWith(
+                fontStyle: FontStyle.italic,
+              ),
             ),
             const SizedBox(height: 4),
-            Text('Version ${AboutInfo.version}',
-                style: theme.textTheme.bodySmall),
+            Text(
+              'Version ${AboutInfo.version}',
+              style: theme.textTheme.bodySmall,
+            ),
           ],
         ),
       ),

@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../models/battery.dart';
-import '../models/bms_telemetry.dart';
+import '../models/monitoring_payload.dart';
 import 'mqtt_service.dart';
 
 abstract class BatteryService {
@@ -16,8 +16,8 @@ class MockBatteryService implements BatteryService {
 
   static final List<Battery> _mockBatteries = [
     Battery(
-      id: 'EV001-B1',
-      name: 'EV001 — Pack 1',
+      id: 'EV0001-1',
+      name: 'EV0001 — Pack 1',
       percentage: 85,
       voltage: 48.5,
       current: 12,
@@ -26,34 +26,14 @@ class MockBatteryService implements BatteryService {
       lastUpdated: DateTime.now().subtract(const Duration(seconds: 20)),
     ),
     Battery(
-      id: 'EV001-B2',
-      name: 'EV001 — Pack 2',
+      id: 'EV0001-2',
+      name: 'EV0001 — Pack 2',
       percentage: 62,
       voltage: 47.8,
       current: 9,
       temperature: 29,
       status: BatteryStatus.discharging,
       lastUpdated: DateTime.now().subtract(const Duration(seconds: 45)),
-    ),
-    Battery(
-      id: 'EV002-B1',
-      name: 'EV002 — Pack 1',
-      percentage: 41,
-      voltage: 46.2,
-      current: 0,
-      temperature: 27,
-      status: BatteryStatus.idle,
-      lastUpdated: DateTime.now().subtract(const Duration(minutes: 3)),
-    ),
-    Battery(
-      id: 'EV002-B2',
-      name: 'EV002 — Pack 2',
-      percentage: 18,
-      voltage: 44.1,
-      current: 0,
-      temperature: 31,
-      status: BatteryStatus.fault,
-      lastUpdated: DateTime.now().subtract(const Duration(minutes: 10)),
     ),
   ];
 
@@ -74,58 +54,45 @@ class MockBatteryService implements BatteryService {
   }
 }
 
-/// Battery service backed by live MQTT telemetry.
-///
-/// Battery IDs are expected in the format "EVXXX-B1", "EVXXX-B2" etc.
-/// Pre-populates cache with placeholder entries for all known pack IDs
-/// so the UI has something to show before the first MQTT message arrives.
+/// Battery service backed by live MQTT monitoring on `data/monitoring`.
 class MqttBatteryService implements BatteryService {
+  MqttBatteryService({
+    required MqttService mqttService,
+    this.onDataUpdated,
+  }) : _mqtt = mqttService {
+    _subscription = _mqtt.monitoringStream.listen(_onMonitoring);
+  }
+
   final MqttService _mqtt;
   final Map<String, Battery> _cache = {};
-  StreamSubscription<BmsTelemetry>? _subscription;
+  StreamSubscription<MonitoringPayload>? _subscription;
 
   VoidCallback? onDataUpdated;
 
-  MqttBatteryService({
-    required MqttService mqttService,
-    List<String> knownIds = const [
-      'EV001-B1', 'EV001-B2',
-      'EV002-B1', 'EV002-B2',
-    ],
-    this.onDataUpdated,
-  }) : _mqtt = mqttService {
-    for (final id in knownIds) {
+  void _onMonitoring(MonitoringPayload payload) {
+    if (payload.evid.isEmpty) return;
+
+    for (final pack in payload.packs) {
+      final id = MonitoringPayload.batteryId(payload.evid, pack.packNumber);
+      final status =
+          pack.current > 0
+              ? BatteryStatus.discharging
+              : pack.current < 0
+              ? BatteryStatus.charging
+              : BatteryStatus.idle;
+
       _cache[id] = Battery(
         id: id,
-        name: id.replaceAll('-', ' — '),
-        percentage: 0,
-        voltage: 0,
-        current: 0,
+        name: '${payload.evid} — Pack ${pack.packNumber}',
+        percentage: pack.soc,
+        voltage: pack.voltage,
+        current: pack.current.abs(),
         temperature: 0,
-        status: BatteryStatus.fault,
-        lastUpdated: DateTime.now(),
+        status: status,
+        lastUpdated: payload.receivedAt,
       );
     }
-    _subscription = _mqtt.telemetryStream.listen(_onTelemetry);
-  }
 
-  void _onTelemetry(BmsTelemetry data) {
-    final status = data.current > 0
-        ? BatteryStatus.discharging
-        : data.current < 0
-            ? BatteryStatus.charging
-            : BatteryStatus.idle;
-
-    _cache[data.id] = Battery(
-      id: data.id,
-      name: data.id.replaceAll('-', ' — '),
-      percentage: data.soc,
-      voltage: data.voltage,
-      current: data.current.abs(),
-      temperature: 0,
-      status: status,
-      lastUpdated: data.timestamp,
-    );
     onDataUpdated?.call();
   }
 
@@ -138,7 +105,8 @@ class MqttBatteryService implements BatteryService {
 
   @override
   Future<List<Battery>> fetchBatteries() async {
-    return _cache.values.map(_flagStale).toList();
+    return _cache.values.map(_flagStale).toList()
+      ..sort((a, b) => a.id.compareTo(b.id));
   }
 
   @override

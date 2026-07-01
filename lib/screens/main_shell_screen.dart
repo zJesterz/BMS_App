@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 import '../models/battery.dart';
 import '../services/auth_service.dart';
 import '../services/battery_service.dart';
-import '../services/ev_service.dart';
+import '../services/history_api_service.dart';
 import '../services/mqtt_service.dart';
 import '../widgets/app_navigation_drawer.dart';
 import '../widgets/settings_panel.dart';
@@ -15,11 +14,7 @@ import 'login_screen.dart';
 import 'main_page.dart';
 
 class MainShellScreen extends StatefulWidget {
-  const MainShellScreen({
-    super.key,
-    this.batteryService,
-    this.authService,
-  });
+  const MainShellScreen({super.key, this.batteryService, this.authService});
 
   final BatteryService? batteryService;
   final AuthService? authService;
@@ -31,12 +26,15 @@ class MainShellScreen extends StatefulWidget {
 class _MainShellScreenState extends State<MainShellScreen> {
   late BatteryService _batteryService;
   MqttService? _mqttService;
+  final _historyApi = HistoryApiService();
   List<Battery> _batteries = [];
   int _selectedPageIndex = 0;
   bool _loadingEvConfig = true;
   bool _mqttConnecting = false;
   bool _mqttConnected = false;
   int _batteryUpdateTick = 0;
+  bool _analyticsGraphShown = false;
+  String? _statusMessage;
 
   @override
   void initState() {
@@ -47,45 +45,49 @@ class _MainShellScreenState extends State<MainShellScreen> {
 
   Future<void> _initFromFirestore() async {
     setState(() => _loadingEvConfig = false);
+    _loadBatteries();
   }
 
-  Future<void> _startMqtt(String evId) async {
-    setState(() => _mqttConnecting = true);
+  /// Publishes BMS config then subscribes to `data/monitoring` for live data.
+  Future<void> _startMonitoring({
+    required String bms1,
+    required String bms2,
+  }) async {
+    setState(() {
+      _mqttConnecting = true;
+      _statusMessage = null;
+    });
+
     try {
-      final email = FirebaseAuth.instance.currentUser?.email;
-      final evs = email != null
-          ? await EvService().getEvsForUser(email)
-          : <EvConfig>[];
-
-      final config = evs.firstWhere(
-        (e) => e.evid == evId,
-        orElse: () => evs.isNotEmpty
-            ? evs.first
-            : EvConfig(
-                evid: evId,
-                mqttClient: '',
-                mqttUsername: '',
-                mqttPassword: '',
-                iotEndpoint: '',
-              ),
+      final configOk = await MqttService.publishBmsConfig(
+        bms1: bms1,
+        bms2: bms2,
       );
+      if (!configOk) {
+        setState(() {
+          _mqttConnecting = false;
+          _statusMessage = 'Failed to publish BMS config';
+        });
+        return;
+      }
 
-      final uri = Uri.tryParse(config.iotEndpoint);
-      final host =
-          (uri?.host.isNotEmpty ?? false) ? uri!.host : config.iotEndpoint;
-      final port = (uri?.port ?? 0) != 0 ? uri!.port : 1883;
+      _mqttService?.dispose();
+      if (_batteryService is MqttBatteryService) {
+        (_batteryService as MqttBatteryService).dispose();
+      }
 
-      _mqttService?.disconnect();
+      final mqttService = MqttService();
+      final connected = await mqttService.connectMonitoring();
 
-      final mqttService = MqttService(host: host, port: port);
-      await mqttService.connect(
-        username:
-            config.mqttUsername.isNotEmpty ? config.mqttUsername : null,
-        password:
-            config.mqttPassword.isNotEmpty ? config.mqttPassword : null,
-        clientId:
-            config.mqttClient.isNotEmpty ? config.mqttClient : null,
-      );
+      if (!connected) {
+        mqttService.dispose();
+        setState(() {
+          _mqttConnecting = false;
+          _mqttConnected = false;
+          _statusMessage = 'MQTT connection failed';
+        });
+        return;
+      }
 
       final batteryService = MqttBatteryService(mqttService: mqttService);
       batteryService.onDataUpdated = _onDataUpdated;
@@ -93,8 +95,9 @@ class _MainShellScreenState extends State<MainShellScreen> {
       setState(() {
         _mqttService = mqttService;
         _batteryService = batteryService;
-        _mqttConnected = mqttService.isConnected;
+        _mqttConnected = true;
         _mqttConnecting = false;
+        _statusMessage = 'Connected — waiting for telemetry…';
       });
 
       _loadBatteries();
@@ -102,13 +105,35 @@ class _MainShellScreenState extends State<MainShellScreen> {
       setState(() {
         _mqttConnecting = false;
         _mqttConnected = false;
+        _statusMessage = 'MQTT connection failed';
       });
     }
   }
 
+  Future<void> _downloadHistory({
+    required DateTime start,
+    required DateTime end,
+    String? evid,
+  }) async {
+    await _historyApi.downloadHistory(start: start, end: end, evid: evid);
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          'History downloaded (${start.toLocal()} → ${end.toLocal()})',
+        ),
+      ),
+    );
+  }
+
   void _onDataUpdated() {
     _loadBatteries();
-    if (mounted) setState(() => _batteryUpdateTick++);
+    if (mounted) {
+      setState(() {
+        _batteryUpdateTick++;
+        _statusMessage = 'Receiving live telemetry';
+      });
+    }
   }
 
   void _loadBatteries() {
@@ -128,7 +153,10 @@ class _MainShellScreenState extends State<MainShellScreen> {
   }
 
   Future<void> _logout() async {
-    _mqttService?.disconnect();
+    _mqttService?.dispose();
+    if (_batteryService is MqttBatteryService) {
+      (_batteryService as MqttBatteryService).dispose();
+    }
     await widget.authService?.logout();
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
@@ -153,11 +181,21 @@ class _MainShellScreenState extends State<MainShellScreen> {
           onRefresh: _onRefresh,
           mqttConnected: _mqttConnected,
           mqttConnecting: _mqttConnecting,
-          onStartMqtt: _startMqtt,
           batteryUpdateTick: _batteryUpdateTick,
         );
       case 2:
-        return const AnalyticsPage();
+        return AnalyticsPage(
+          batteries: _batteries,
+          mqttConnected: _mqttConnected,
+          mqttConnecting: _mqttConnecting,
+          statusMessage: _statusMessage,
+          onGo: _startMonitoring,
+          onDownload: _downloadHistory,
+          batteryUpdateTick: _batteryUpdateTick,
+          onGraphVisibilityChanged: (shown) {
+            setState(() => _analyticsGraphShown = shown);
+          },
+        );
       case 3:
         return const HistoryPage();
       default:
@@ -168,6 +206,9 @@ class _MainShellScreenState extends State<MainShellScreen> {
   @override
   void dispose() {
     _mqttService?.dispose();
+    if (_batteryService is MqttBatteryService) {
+      (_batteryService as MqttBatteryService).dispose();
+    }
     super.dispose();
   }
 
@@ -179,21 +220,24 @@ class _MainShellScreenState extends State<MainShellScreen> {
         onDestinationSelected: _onNavSelected,
       ),
       endDrawer: const SettingsPanel(),
-      appBar: AppBar(
-        title: const Text('Battery Monitor'),
-        actions: [
-          if (_selectedPageIndex == 1)
+      appBar: _analyticsGraphShown
+          ? null
+          : AppBar(
+            title: const Text('Battery Monitor'),
+            actions: [
+          if (_selectedPageIndex == 1 || _selectedPageIndex == 2)
             IconButton(
               tooltip: 'Refresh',
               onPressed: _onRefresh,
               icon: const Icon(Icons.refresh_rounded),
             ),
           Builder(
-            builder: (context) => IconButton(
-              tooltip: 'Settings',
-              onPressed: () => Scaffold.of(context).openEndDrawer(),
-              icon: const Icon(Icons.settings_rounded),
-            ),
+            builder:
+                (context) => IconButton(
+                  tooltip: 'Settings',
+                  onPressed: () => Scaffold.of(context).openEndDrawer(),
+                  icon: const Icon(Icons.settings_rounded),
+                ),
           ),
           IconButton(
             tooltip: 'Sign out',
