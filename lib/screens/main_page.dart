@@ -13,12 +13,12 @@ class HomePage extends StatelessWidget {
 
     final connectedCount =
         batteries.where(
-              (b) => b.status == BatteryStatus.charging || b.status == BatteryStatus.discharging,
+              (b) => b.status == BatteryStatus.idle,
         ).length;
 
     final unconnectedCount =
         batteries.where(
-              (b) => b.status == BatteryStatus.idle || b.status == BatteryStatus.fault,
+              (b) => b.status != BatteryStatus.idle,
         ).length;
 
     return SingleChildScrollView(

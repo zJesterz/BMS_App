@@ -28,7 +28,7 @@ class AboutScreen extends StatelessWidget {
               'Welcome to ${AboutInfo.appName}',
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
-                color: const Color.fromARGB(255, 180, 70, 11),
+                color: const Color.fromARGB(255, 50, 104, 167),
               ),
               textAlign: TextAlign.center,
             ),
@@ -47,50 +47,6 @@ class AboutScreen extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // Contact card
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Contact Us',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: const Color.fromARGB(255, 180, 70, 11),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Row(
-                      children: [
-                        const Icon(Icons.person_outline_rounded, size: 20),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${AboutInfo.contactName} — ${AboutInfo.contactRole}',
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.email_outlined, size: 20),
-                        const SizedBox(width: 8),
-                        Text(AboutInfo.contactEmail),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: [
-                        const Icon(Icons.phone_outlined, size: 20),
-                        const SizedBox(width: 8),
-                        Text(AboutInfo.contactPhone),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
             const SizedBox(height: 24),
 
             Text(

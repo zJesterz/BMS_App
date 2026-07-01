@@ -262,9 +262,10 @@ class _BatteriesPageState extends State<BatteriesPage> {
                     onConfirm: (values) {
                       setState(() => _selectedBatteryIds = values);
                     },
-                  ),
+                   ),
 
-                  // ── Connection status / Go button ──────────────────
+
+                   // ── Connection status / Go button ──────────────────
                   if (widget.mqttConnected)
                     _StatusBanner(
                       icon: Icons.wifi_rounded,

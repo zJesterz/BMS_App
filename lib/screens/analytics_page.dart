@@ -545,6 +545,7 @@ class _AnalyticsPageState extends State<AnalyticsPage> {
             Wrap(
               spacing: 12,
               runSpacing: 6,
+              alignment: WrapAlignment.center,
               children: selectedMetrics.map((metric) {
                 final color = metricColors[metric]!;
                 return Row(

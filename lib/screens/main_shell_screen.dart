@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/battery.dart';
+import '../models/history_event.dart';
 import '../services/auth_service.dart';
 import '../services/battery_service.dart';
 import '../services/history_api_service.dart';
@@ -35,6 +36,7 @@ class _MainShellScreenState extends State<MainShellScreen> {
   int _batteryUpdateTick = 0;
   bool _analyticsGraphShown = false;
   String? _statusMessage;
+  final List<HistoryEvent> _events = [];
 
   @override
   void initState() {
@@ -97,6 +99,13 @@ class _MainShellScreenState extends State<MainShellScreen> {
       final batteryService = MqttBatteryService(mqttService: mqttService);
       batteryService.onDataUpdated = _onDataUpdated;
 
+      _addEvent(HistoryEvent(
+        timestamp: DateTime.now(),
+        title: 'Monitoring Started',
+        description: 'BMS1: $bms1, BMS2: $bms2',
+        icon: Icons.wifi_rounded,
+        color: Colors.green,
+      ));
       setState(() {
         _mqttService = mqttService;
         _batteryService = batteryService;
@@ -115,6 +124,13 @@ class _MainShellScreenState extends State<MainShellScreen> {
     }
   }
 
+  void _addEvent(HistoryEvent event) {
+    setState(() {
+      _events.insert(0, event);
+      if (_events.length > 10) _events.removeLast();
+    });
+  }
+
   Future<void> _downloadHistory({
     required DateTime start,
     required DateTime end,
@@ -122,6 +138,14 @@ class _MainShellScreenState extends State<MainShellScreen> {
   }) async {
     await _historyApi.downloadHistory(start: start, end: end, evid: evid);
     if (!mounted) return;
+    _addEvent(HistoryEvent(
+      timestamp: DateTime.now(),
+      title: 'History Downloaded',
+      description:
+          '${evid ?? 'All EVs'} — ${start.toLocal().toString().substring(0, 16)} → ${end.toLocal().toString().substring(0, 16)}',
+      icon: Icons.download_rounded,
+      color: Theme.of(context).colorScheme.primary,
+    ));
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -156,6 +180,13 @@ class _MainShellScreenState extends State<MainShellScreen> {
     _batteryService = widget.batteryService ?? MockBatteryService();
     final list = await _batteryService.fetchBatteries();
     if (mounted) {
+      _addEvent(HistoryEvent(
+        timestamp: DateTime.now(),
+        title: 'Data Refreshed',
+        description: '${list.length} battery pack(s) loaded',
+        icon: Icons.refresh_rounded,
+        color: Colors.blue,
+      ));
       setState(() {
         _batteries = list;
         _mqttConnected = false;
@@ -214,10 +245,19 @@ class _MainShellScreenState extends State<MainShellScreen> {
           batteryUpdateTick: _batteryUpdateTick,
           onGraphVisibilityChanged: (shown) {
             setState(() => _analyticsGraphShown = shown);
+            if (shown) {
+              _addEvent(HistoryEvent(
+                timestamp: DateTime.now(),
+                title: 'Graph Opened',
+                description: 'Landscape graph view',
+                icon: Icons.show_chart_rounded,
+                color: Colors.orange,
+              ));
+            }
           },
         );
       case 3:
-        return const HistoryPage();
+        return HistoryPage(batteries: _batteries, events: _events);
       default:
         return const SizedBox.shrink();
     }
